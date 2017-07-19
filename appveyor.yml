@@ -2,12 +2,16 @@ environment:
   matrix:
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       GENERATOR: Visual Studio 15 2017
+      OPENSSL_VERSION: Win32OpenSSL-1_0_2L
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       GENERATOR: Visual Studio 15 2017 Win64
+      OPENSSL_VERSION: Win64OpenSSL-1_0_2L
 
 platform: x64
 
 build_script:
+  - ps: Start-FileDownload 'http://slproweb.com/download/%OPENSSL_VERSION%.exe'
+  - ps: Start-Process "%OPENSSL_VERSION%.exe" -ArgumentList "/silent /verysilent /sp- /suppressmsgboxes" -Wait
   - md build
   - cd build
   - cmake .. -DCMAKE_BUILD_TYPE=Release -DBPWS_BUILD_CHECK=ON -DBPWS_BUILD_LIBWEBSOCKETS=ON -G "%GENERATOR%"
