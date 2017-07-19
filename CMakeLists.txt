@@ -29,9 +29,11 @@ endif ()
 if (MSVC)
   if (NOT MSVC_VERSION LESS 1500)
     set(ADDITIONAL_COMPILER_FLAGS "${ADDITIONAL_COMPILER_FLAGS} /MP")
+    set(ADDITIONAL_JSONC_C_FLAGS "/DSTRERROR_OVERRIDE_IMPL")
   endif ()
 else ()
   # PIC for compatibility
+  set(ADDITIONAL_JSONC_C_FLAGS "-fPIC")
   set(ADDITIONAL_LIBWEBSOCKETS_C_FLAGS "-fPIC")
   set(ADDITIONAL_COMPILER_FLAGS "-fPIC")
 
@@ -84,6 +86,27 @@ else ()
   endif ()
 endif ()
 
+if (BPWS_BUILD_JSONC)
+  ExternalProject_Add(
+    json-c
+    GIT_REPOSITORY https://github.com/json-c/json-c
+    GIT_TAG "master"
+    CMAKE_ARGS "-DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}" "-DCMAKE_TOOLCHAIN_FILE:PATH=${CMAKE_TOOLCHAIN_FILE}" "-DCMAKE_C_FLAGS:STRING=${ADDITIONAL_JSONC_C_FLAGS}" "-DCMAKE_PREFIX_PATH:PATH=${CMAKE_PREFIX_PATH}" "-DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>"
+  )
+  add_library(json-c-static STATIC IMPORTED)
+  add_dependencies(json-c-static json-c)
+  ExternalProject_Get_Property(json-c INSTALL_DIR)
+  set_property(TARGET json-c-static PROPERTY IMPORTED_LOCATION ${INSTALL_DIR}/lib/json-c.lib)
+
+  set(JSONC_INCLUDE_DIRS ${INSTALL_DIR}/include)
+  set(JSONC_LIBRARIES json-c-static)
+else ()
+  find_package(json-c)
+  if (NOT JSONC_FOUND)
+    message(FATAL_ERROR "Call cmake with '-DBPWS_BUILD_JSONC=ON' to build json-c as ExternalProject.")
+  endif ()
+endif ()
+
 if (BPWS_BUILD_CHECK)
   ExternalProject_Add(
     check-code
@@ -119,7 +142,7 @@ if (UNIX AND NOT APPLE)
   list(APPEND CHECK_LIBRARIES m pthread rt)
 endif ()
 
-include_directories(${LIBWEBSOCKETS_INCLUDE_DIRS} include src)
+include_directories(${LIBWEBSOCKETS_INCLUDE_DIRS} ${JSONC_INCLUDE_DIRS} include src)
 
 set(BPWS_PUBLIC_HEADERS
   include/bpws.h
@@ -168,7 +191,7 @@ source_group("Tests" FILES ${BPWS_TEST_FILES})
 add_library(bpws SHARED ${BPWS_PUBLIC_HEADERS} ${BPWS_PRIVATE_HEADERS} ${BPWS_SOURCES})
 set_property(TARGET bpws PROPERTY COMPILE_DEFINITIONS BPWS_EXPORTS)
 set_property(TARGET bpws PROPERTY PUBLIC_HEADER ${BPWS_PUBLIC_HEADERS})
-target_link_libraries(bpws ${BPWS_LIBRARIES})
+target_link_libraries(bpws ${BPWS_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES} ${JSONC_LIBRARIES})
 install(TARGETS bpws
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
@@ -179,7 +202,7 @@ install(TARGETS bpws
 add_library(bpws-lws SHARED ${BPWS_LWS_PUBLIC_HEADERS} ${BPWS_LWS_SOURCES})
 set_property(TARGET bpws-lws PROPERTY COMPILE_DEFINITIONS BPWS_LWS_EXPORTS)
 set_property(TARGET bpws-lws PROPERTY PUBLIC_HEADER ${BPWS_LWS_PUBLIC_HEADERS})
-target_link_libraries(bpws-lws bpws ${LIBWEBSOCKETS_LIBRARIES})
+target_link_libraries(bpws-lws bpws ${LIBWEBSOCKETS_LIBRARIES} ${JSONC_LIBRARIES})
 if (NOT WIN32)
   target_link_libraries(bpws-lws pthread)
 endif ()
@@ -197,8 +220,8 @@ if (CHECK_FOUND)
   include_directories(${CHECK_INCLUDE_DIRS})
   add_executable(test_bpws ${BPWS_TEST_FILES} ${BPWS_PUBLIC_HEADERS} ${BPWS_PRIVATE_HEADERS} ${BPWS_SOURCES})
   set_property(TARGET test_bpws PROPERTY COMPILE_DEFINITIONS BPWS_STATIC BPWS_LWS_STATIC BPWS_USE_CUSTOM_ALLOCATOR)
-  target_link_libraries(test_bpws ${CHECK_LIBRARIES} ${BPWS_LIBRARIES})
-
+  target_link_libraries(test_bpws ${CHECK_LIBRARIES} ${BPWS_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES} ${JSONC_LIBRARIES})
+	
   enable_testing()
   add_test(NAME bpws COMMAND test_bpws)
 endif ()
