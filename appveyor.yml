@@ -10,7 +10,7 @@ environment:
 platform: x64
 
 install:
-  - ps: Start-FileDownload 'http://slproweb.com/download/${Env:OPENSSL_VERSION}.exe'
+  - ps: Start-FileDownload "http://slproweb.com/download/${Env:OPENSSL_VERSION}.exe"
   - ps: Start-Process "${Env:OPENSSL_VERSION}.exe" -ArgumentList "/silent /verysilent /sp- /suppressmsgboxes" -Wait
   
 build_script:
