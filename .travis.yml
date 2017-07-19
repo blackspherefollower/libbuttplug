@@ -6,9 +6,8 @@ matrix:
       - gem install coveralls-lcov
     after_success:
       - coveralls-lcov build/coverage_test.info
-  - env: BUILD_TYPE=release
-  - env: BUILD_TYPE=lxc CMAKE_ARGS="-DBPWS_BUILD_CHECK=ON" LXC_DIST=precise LXC_ARCH=i386
-  - env: BUILD_TYPE=lxc CMAKE_ARGS="-DBPWS_BUILD_CHECK=ON" LXC_DIST=precise LXC_ARCH=amd64
+  - env: BUILD_TYPE=lxc CMAKE_ARGS="-DBPWS_BUILD_CHECK=ON" LXC_DIST=trusty LXC_ARCH=i386
+  - env: BUILD_TYPE=lxc CMAKE_ARGS="-DBPWS_BUILD_CHECK=ON" LXC_DIST=trusty LXC_ARCH=amd64
   - env: BUILD_TYPE=lxc CMAKE_ARGS="-DBPWS_BUILD_CHECK=OFF" LXC_DIST=xenial LXC_ARCH=i386
   - env: BUILD_TYPE=lxc CMAKE_ARGS="-DBPWS_BUILD_CHECK=OFF" LXC_DIST=xenial LXC_ARCH=amd64
 script:
