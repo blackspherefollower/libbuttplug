@@ -16,6 +16,7 @@ void testcase_setup(void);
 void testcase_teardown(void);
 
 TCase* testcase_bpws(void);
+TCase* testcase_message_parse(void);
 
 BPWS_END_EXTERN_C
 

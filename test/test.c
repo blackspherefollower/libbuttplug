@@ -68,6 +68,20 @@ TCase *testcase_bpws(void)
 	return ret;
 }
 
+START_TEST(string_2_message)
+{
+	char *in = "{\"Test\": {\"Id\": 3, \"TestString\": \"foo bar\"}}";
+	struct bpws_msg_base_t *msg = bpws_parse_msg(in);
+}
+END_TEST
+
+TCase *testcase_message_parse(void)
+{
+	TCase *ret = tcase_create("BPWS_MSG");
+	tcase_add_test(ret, string_2_message);
+	return ret;
+}
+
 int main(int argc, char* argv[])
 {
 	int number_failed;
@@ -75,6 +89,7 @@ int main(int argc, char* argv[])
 	Suite* s = suite_create("BPWS");
 
 	suite_add_tcase(s, testcase_bpws());
+	suite_add_tcase(s, testcase_message_parse());
 
 	sr = srunner_create(s);
 	srunner_set_fork_status(sr, CK_NOFORK);
