@@ -1,5 +1,6 @@
 #include "test.h"
 #include <stdlib.h>
+#include <stdint.h>
 
 int* g_malloc_fails;
 int g_malloc_count;
@@ -72,6 +73,10 @@ START_TEST(string_2_message)
 {
 	char *in = "{\"Test\": {\"Id\": 3, \"TestString\": \"foo bar\"}}";
 	struct bpws_msg_base_t *msg = bpws_parse_msg(in);
+	ck_assert_int_eq(msg->id, 3);
+	ck_assert_int_eq(msg->type, BPWS_MSG_TYPE_TEST);
+	ck_assert_str_eq(((struct bpws_msg_test *) msg)->test_string, "foo bar");
+	bpws_delete_msg(msg);
 }
 END_TEST
 
