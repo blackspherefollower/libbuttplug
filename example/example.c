@@ -188,22 +188,6 @@ callback_lws_buttplug(struct lws *wsi, enum lws_callback_reasons reason,
 
 #if defined(LWS_OPENSSL_SUPPORT) && defined(LWS_HAVE_SSL_CTX_set1_param)
 	case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS:
-		if (crl_path[0]) {
-			/* Enable CRL checking of the server certificate */
-			X509_VERIFY_PARAM *param = X509_VERIFY_PARAM_new();
-			X509_VERIFY_PARAM_set_flags(param, X509_V_FLAG_CRL_CHECK);
-			SSL_CTX_set1_param((SSL_CTX*)user, param);
-			X509_STORE *store = SSL_CTX_get_cert_store((SSL_CTX*)user);
-			X509_LOOKUP *lookup = X509_STORE_add_lookup(store, X509_LOOKUP_file());
-			int n = X509_load_cert_crl_file(lookup, crl_path, X509_FILETYPE_PEM);
-			X509_VERIFY_PARAM_free(param);
-			if (n != 1) {
-				char errbuf[256];
-				n = ERR_get_error();
-				lwsl_err("LWS_CALLBACK_OPENSSL_LOAD_EXTRA_CLIENT_VERIFY_CERTS: SSL error: %s (%d)\n", ERR_error_string(n, errbuf), n);
-				return 1;
-			}
-		}
 		break;
 #endif
 
@@ -322,8 +306,8 @@ int main(int argc, char **argv)
 			info.ssl_ca_filepath = ca_path;
 
 #if defined(LWS_OPENSSL_SUPPORT) && defined(LWS_HAVE_SSL_CTX_set1_param)
-		else if (crl_path[0])
-			lwsl_notice("WARNING, providing a CRL requires a CA cert!\n");
+		//else if (crl_path[0])
+		//	lwsl_notice("WARNING, providing a CRL requires a CA cert!\n");
 #endif
 	}
 
