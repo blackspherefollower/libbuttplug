@@ -203,7 +203,7 @@ struct bpws_msg_kiiroo_cmd {
 	enum bpws_msg_type_t type;
 	long long id;
 	unsigned int device_index;
-	unsigned int position;
+	char* command;
 };
 
 struct bpws_msg_vorze_a10_cyclone_cmd {
