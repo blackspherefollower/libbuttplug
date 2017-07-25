@@ -90,7 +90,7 @@ else ()
   endif ()
 endif ()
 
-if (BPWS_BUILD_JSON-C)
+if (BPWS_BUILD_JSONC)
   ExternalProject_Add(
     json-c
     GIT_REPOSITORY https://github.com/json-c/json-c
@@ -146,7 +146,7 @@ if (UNIX AND NOT APPLE)
   list(APPEND CHECK_LIBRARIES m pthread rt)
 endif ()
 
-include_directories(${LIBWEBSOCKETS_INCLUDE_DIRS} ${JSONC_INCLUDE_DIRS} include src)
+include_directories(${LIBWEBSOCKETS_INCLUDE_DIRS} ${JSON-C_INCLUDE_DIRS} include src)
 
 set(BPWS_PUBLIC_HEADERS
   include/bpws.h
@@ -195,7 +195,7 @@ source_group("Tests" FILES ${BPWS_TEST_FILES})
 add_library(bpws SHARED ${BPWS_PUBLIC_HEADERS} ${BPWS_PRIVATE_HEADERS} ${BPWS_SOURCES})
 set_property(TARGET bpws PROPERTY COMPILE_DEFINITIONS BPWS_EXPORTS)
 set_property(TARGET bpws PROPERTY PUBLIC_HEADER ${BPWS_PUBLIC_HEADERS})
-target_link_libraries(bpws ${BPWS_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES} ${JSONC_LIBRARIES})
+target_link_libraries(bpws ${BPWS_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES} ${JSON-C_LIBRARIES})
 install(TARGETS bpws
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
@@ -206,7 +206,7 @@ install(TARGETS bpws
 add_library(bpws-lws SHARED ${BPWS_LWS_PUBLIC_HEADERS} ${BPWS_LWS_SOURCES})
 set_property(TARGET bpws-lws PROPERTY COMPILE_DEFINITIONS BPWS_LWS_EXPORTS)
 set_property(TARGET bpws-lws PROPERTY PUBLIC_HEADER ${BPWS_LWS_PUBLIC_HEADERS})
-target_link_libraries(bpws-lws bpws ${LIBWEBSOCKETS_LIBRARIES} ${JSONC_LIBRARIES})
+target_link_libraries(bpws-lws bpws ${LIBWEBSOCKETS_LIBRARIES} ${JSON-C_LIBRARIES})
 if (NOT WIN32)
   target_link_libraries(bpws-lws pthread)
 endif ()
@@ -224,7 +224,7 @@ if (CHECK_FOUND)
   include_directories(${CHECK_INCLUDE_DIRS})
   add_executable(test_bpws ${BPWS_TEST_FILES} ${BPWS_PUBLIC_HEADERS} ${BPWS_PRIVATE_HEADERS} ${BPWS_SOURCES})
   set_property(TARGET test_bpws PROPERTY COMPILE_DEFINITIONS BPWS_STATIC BPWS_LWS_STATIC BPWS_USE_CUSTOM_ALLOCATOR)
-  target_link_libraries(test_bpws ${CHECK_LIBRARIES} ${BPWS_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES} ${JSONC_LIBRARIES})
+  target_link_libraries(test_bpws ${CHECK_LIBRARIES} ${BPWS_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES} ${JSON-C_LIBRARIES})
 	
   enable_testing()
   add_test(NAME bpws COMMAND test_bpws)

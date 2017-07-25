@@ -16,7 +16,7 @@ install:
 build_script:
   - md build
   - cd build
-  - cmake .. -DCMAKE_BUILD_TYPE=Release -DBPWS_BUILD_CHECK=ON -DBPWS_BUILD_LIBWEBSOCKETS=ON -DBPWS_BUILD_JSON-C=ON -G "%GENERATOR%"
+  - cmake .. -DCMAKE_BUILD_TYPE=Release -DBPWS_BUILD_CHECK=ON -DBPWS_BUILD_LIBWEBSOCKETS=ON -DBPWS_BUILD_JSONC=ON -G "%GENERATOR%"
   - cmake --build . --config Release
 
 test_script:
