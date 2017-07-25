@@ -27,7 +27,7 @@ elif [[ $1 == lxc ]]; then
   sudo lxc-start -n $CONTAINER_NAME
   sudo lxc-attach -n $CONTAINER_NAME -- bash -c 'while ! ping -c 1 ubuntu.com; do sleep 1; done'
   sudo lxc-attach -n $CONTAINER_NAME -- apt-get -qq update
-  sudo lxc-attach -n $CONTAINER_NAME -- apt-get install -y cmake check git libssl-dev make
+  sudo lxc-attach -n $CONTAINER_NAME -- apt-get install -y cmake check git libssl-dev libjson-c-dev make
   sudo lxc-attach -n $CONTAINER_NAME -- cmake -B/git_build -H/git_source -DBPWS_BUILD_LIBWEBSOCKETS=ON -DBPWS_BUILD_JSONC=ON $2
   sudo lxc-attach -n $CONTAINER_NAME -- cmake --build /git_build
   sudo lxc-attach -n $CONTAINER_NAME -- cmake --build /git_build --target test

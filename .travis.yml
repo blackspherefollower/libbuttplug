@@ -19,3 +19,4 @@ addons:
     - cmake
     - lcov
     - libssl-dev
+    - libjson-c-dev
