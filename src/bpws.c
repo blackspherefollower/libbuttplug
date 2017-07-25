@@ -49,7 +49,8 @@ static long long bpws_get_id(struct json_object *jobj)
 static char* bpws_get_string(struct json_object *jobj, char *field)
 {
 	int val_type;
-	char *ret, *str;
+	char *ret;
+	const char *str;
 
 	ret = 0;
 	json_object_object_foreach(jobj, key, val) {
