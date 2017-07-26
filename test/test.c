@@ -69,7 +69,7 @@ TCase *testcase_bpws(void)
 	return ret;
 }
 
-START_TEST(string_2_message)
+START_TEST(string_2_test_message)
 {
 	char *in = "{\"Test\": {\"Id\": 3, \"TestString\": \"foo bar\"}}";
 	struct bpws_msg_base_t *msg = bpws_parse_msg(in);
@@ -80,10 +80,28 @@ START_TEST(string_2_message)
 }
 END_TEST
 
+
+START_TEST(string_2_server_info_message)
+{
+	char *in = "{\"ServerInfo\": {\"Id\": 2, \"ServerName\": \"foo bar\", \"MajorVersion\": 1, \"MinorVersion\": 2, \"BuildVersion\": 3, \"MessageVersion\": 4, \"MaxPingTime\": 500}}";
+	struct bpws_msg_base_t *msg = bpws_parse_msg(in);
+	ck_assert_int_eq(msg->id, 2);
+	ck_assert_int_eq(msg->type, BPWS_MSG_TYPE_SERVER_INFO);
+	ck_assert_str_eq(((struct bpws_msg_server_info *) msg)->server_name, "foo bar");
+	ck_assert_int_eq(((struct bpws_msg_server_info *) msg)->major_version, 1);
+	ck_assert_int_eq(((struct bpws_msg_server_info *) msg)->minor_version, 2);
+	ck_assert_int_eq(((struct bpws_msg_server_info *) msg)->build_version, 3);
+	ck_assert_int_eq(((struct bpws_msg_server_info *) msg)->message_version, 4);
+	ck_assert_int_eq(((struct bpws_msg_server_info *) msg)->max_ping_time, 500);
+	bpws_delete_msg(msg);
+}
+END_TEST
+
 TCase *testcase_message_parse(void)
 {
 	TCase *ret = tcase_create("BPWS_MSG");
-	tcase_add_test(ret, string_2_message);
+	tcase_add_test(ret, string_2_test_message);
+	tcase_add_test(ret, string_2_server_info_message);
 	return ret;
 }
 
