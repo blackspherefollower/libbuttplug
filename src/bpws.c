@@ -108,20 +108,20 @@ static char** bpws_get_string_array(struct json_object *jobj, char *field)
 	jarray = json_object_object_get(jobj, field);
 	len = json_object_array_length( jarray );
 
-	count = 1;
+	count = 0;
 	for (i = 0; i < len; i++) {
 		jvalue = json_object_array_get_idx(jarray, i);
 		if (json_object_get_type(jvalue) == json_type_string)
 		{
 			count++;
-			tmp = (char**)realloc(ret, sizeof(char*) * count);
+			tmp = (char**)realloc(ret, sizeof(char*) * (count + 1));
 			if (tmp)
 				ret = tmp;
 			else
 				return ret; // we can go no further
 
 			str = json_object_get_string(jvalue);
-			ret[count-1] = (char *)malloc(strlen(str) + 1);
+			ret[count - 1] = (char *)malloc(strlen(str) + 1);
 			strcpy(ret[count - 1], str);
 			ret[count] = 0;
 		}
@@ -144,21 +144,25 @@ struct bpws_msg_device_message_info** bpws_get_device_array(struct json_object *
 	ret[0] = 0;
 
 	jarray = json_object_object_get(jobj, field);
+	if (json_object_get_type(jarray) != json_type_array)
+		return ret;
+
 	len = json_object_array_length(jarray);
 
 	id = bpws_get_id(jobj);
-	count = 1;
+	count = 0;
 	for (i = 0; i < len; i++) {
 		jvalue = json_object_array_get_idx(jarray, i);
 		if (json_object_get_type(jvalue) == json_type_object)
 		{
 			count++;
-			tmp = (struct bpws_msg_device_message_info**)realloc(ret, sizeof(struct bpws_msg_device_message_info*) * count);
+			tmp = (struct bpws_msg_device_message_info**)realloc(ret, sizeof(struct bpws_msg_device_message_info*) * (count + 1));
 			if (tmp)
 				ret = tmp;
 			else
 				return ret; // we can go no further
 
+			ret[count - 1] = (struct bpws_msg_device_message_info *) malloc(sizeof(struct bpws_msg_device_message_info));
 			((struct bpws_msg_device_message_info *) ret[count - 1])->device_name = bpws_get_string(jvalue, "DeviceName");
 			((struct bpws_msg_device_message_info *) ret[count - 1])->device_index = bpws_get_int(jvalue, "DeviceIndex");
 			((struct bpws_msg_device_message_info *) ret[count - 1])->device_messages = bpws_get_string_array(jvalue, "DeviceMessages");
@@ -178,9 +182,17 @@ struct bpws_msg_base_t* bpws_parse_msg(char *jmsg)
 	char *val_type_str;
 	int val_type;
 	int msgType;
+	enum json_tokener_error error;
 
-	jobj = json_tokener_parse(jmsg);
+	error = 0;
+	jobj = json_tokener_parse_verbose(jmsg, &error);
 	msg = 0;
+
+	if (!jobj)
+	{
+		// We expect this to be an object, if it isn't error out
+		return 0; // Would be better to construct an error object...
+	}
 
 	// key and val don't exist outside of this bloc
 	json_object_object_foreach(jobj, key, val) {
@@ -356,8 +368,8 @@ void bpws_delete_msg(struct bpws_msg_base_t *msg)
 	case BPWS_MSG_TYPE_DEVICE_MESSAGE_INFO:
 		arr = ((struct bpws_msg_device_message_info *) msg)->device_messages;
 		for (i = 0; arr[i]; i++)
-			free((char**) arr[i]);
-		free(((struct bpws_msg_device_message_info *) msg)->device_messages);
+			free(((char**)arr)[i]);
+		free((char**)arr);
 		free(((struct bpws_msg_device_message_info *) msg)->device_name);
 		free((struct bpws_msg_device_message_info *) msg);
 		break;
@@ -365,14 +377,14 @@ void bpws_delete_msg(struct bpws_msg_base_t *msg)
 		arr = ((struct bpws_msg_device_list *) msg)->devices;
 		for (i = 0; arr[i]; i++)
 			bpws_delete_msg(arr[i]);
-		free(((struct bpws_msg_device_list *) msg)->devices);
+		free((struct bpws_msg_device_message_info **)arr);
 		free((struct bpws_msg_device_list *) msg);
 		break;
 	case BPWS_MSG_TYPE_DEVICE_ADDED:
 		arr = ((struct bpws_msg_device_added *) msg)->device_messages;
 		for (i = 0; arr[i]; i++)
-			free((char**)arr[i]);
-		free(((struct bpws_msg_device_added *) msg)->device_messages);
+			free((char*)arr[i]);
+		free(arr);
 		free(((struct bpws_msg_device_added *) msg)->device_name);
 		free((struct bpws_msg_device_added *) msg);
 		break;

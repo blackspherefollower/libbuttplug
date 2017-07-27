@@ -73,6 +73,7 @@ START_TEST(string_2_test_message)
 {
 	char *in = "{\"Test\": {\"Id\": 3, \"TestString\": \"foo bar\"}}";
 	struct bpws_msg_base_t *msg = bpws_parse_msg(in);
+	ck_assert_ptr_nonnull(msg);
 	ck_assert_int_eq(msg->id, 3);
 	ck_assert_int_eq(msg->type, BPWS_MSG_TYPE_TEST);
 	ck_assert_str_eq(((struct bpws_msg_test *) msg)->test_string, "foo bar");
@@ -85,6 +86,7 @@ START_TEST(string_2_server_info_message)
 {
 	char *in = "{\"ServerInfo\": {\"Id\": 2, \"ServerName\": \"foo bar\", \"MajorVersion\": 1, \"MinorVersion\": 2, \"BuildVersion\": 3, \"MessageVersion\": 4, \"MaxPingTime\": 500}}";
 	struct bpws_msg_base_t *msg = bpws_parse_msg(in);
+	ck_assert_ptr_nonnull(msg);
 	ck_assert_int_eq(msg->id, 2);
 	ck_assert_int_eq(msg->type, BPWS_MSG_TYPE_SERVER_INFO);
 	ck_assert_str_eq(((struct bpws_msg_server_info *) msg)->server_name, "foo bar");
@@ -97,11 +99,55 @@ START_TEST(string_2_server_info_message)
 }
 END_TEST
 
+
+START_TEST(string_2_device_list_message)
+{
+	struct bpws_msg_device_message_info *dev;
+	char *in = "{\"DeviceList\": {\"Id\": 5, \"Devices\": [{ \"DeviceName\": \"foo\", \"DeviceIndex\": 6, \"DeviceMessages\": [ \"foo_cmd_1\", \"foo_cmd_2\" ]}, { \"DeviceName\": \"bar\", \"DeviceIndex\": 7, \"DeviceMessages\": [ \"bar_cmd_1\", \"bar_cmd_2\" ]}]}}";
+	struct bpws_msg_base_t *msg = bpws_parse_msg(in);
+	ck_assert_ptr_nonnull(msg);
+	ck_assert_int_eq(msg->id, 5);
+	ck_assert_int_eq(msg->type, BPWS_MSG_TYPE_DEVICE_LIST);
+	ck_assert_ptr_nonnull(((struct bpws_msg_device_list *) msg)->devices);
+	ck_assert_ptr_nonnull(((struct bpws_msg_device_list *) msg)->devices[0]);
+	ck_assert_ptr_nonnull(((struct bpws_msg_device_list *) msg)->devices[1]);
+	ck_assert_ptr_null(((struct bpws_msg_device_list *) msg)->devices[2]);
+
+	dev = ((struct bpws_msg_device_list *) msg)->devices[0];
+	ck_assert_int_eq(dev->id, 5);
+	ck_assert_int_eq(dev->type, BPWS_MSG_TYPE_DEVICE_MESSAGE_INFO);
+	ck_assert_str_eq(dev->device_name, "foo");
+	ck_assert_int_eq(dev->device_index, 6);
+	ck_assert_ptr_nonnull(dev->device_messages);
+	ck_assert_ptr_nonnull(dev->device_messages[0]);
+	ck_assert_ptr_nonnull(dev->device_messages[1]);
+	ck_assert_ptr_null(dev->device_messages[2]);
+	ck_assert_str_eq(dev->device_messages[0], "foo_cmd_1");
+	ck_assert_str_eq(dev->device_messages[1], "foo_cmd_2");
+
+
+	dev = ((struct bpws_msg_device_list *) msg)->devices[1];
+	ck_assert_int_eq(dev->id, 5);
+	ck_assert_int_eq(dev->type, BPWS_MSG_TYPE_DEVICE_MESSAGE_INFO);
+	ck_assert_str_eq(dev->device_name, "bar");
+	ck_assert_int_eq(dev->device_index, 7);
+	ck_assert_ptr_nonnull(dev->device_messages);
+	ck_assert_ptr_nonnull(dev->device_messages[0]);
+	ck_assert_ptr_nonnull(dev->device_messages[1]);
+	ck_assert_ptr_null(dev->device_messages[2]);
+	ck_assert_str_eq(dev->device_messages[0], "bar_cmd_1");
+	ck_assert_str_eq(dev->device_messages[1], "bar_cmd_2");
+
+	bpws_delete_msg(msg);
+}
+END_TEST
+
 TCase *testcase_message_parse(void)
 {
 	TCase *ret = tcase_create("BPWS_MSG");
 	tcase_add_test(ret, string_2_test_message);
 	tcase_add_test(ret, string_2_server_info_message);
+	tcase_add_test(ret, string_2_device_list_message);
 	return ret;
 }
 
