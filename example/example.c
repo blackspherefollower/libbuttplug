@@ -54,9 +54,13 @@ static int
 callback_lws_buttplug(struct lws *wsi, enum lws_callback_reasons reason,
 	void *user, void *in, size_t len)
 {
+	int bufsize = LWS_PRE + 4096;
 	unsigned char buf[LWS_PRE + 4096];
 	int l = 0;
 	int n;
+	int i;
+	struct bpws_msg_base_t **msgs = 0;
+	struct bpws_msg_base_t *msg = 0;
 
 	switch (reason) {
 	case LWS_CALLBACK_CLIENT_ESTABLISHED:
@@ -78,7 +82,11 @@ callback_lws_buttplug(struct lws *wsi, enum lws_callback_reasons reason,
 	case LWS_CALLBACK_CLIENT_WRITEABLE:
 		if (flag_no_mirror_traffic)
 			return 0;
-		l += sprintf((char *)&buf[LWS_PRE + l], "[{\"RequestServerInfo\": { \"Id\": 1, \"ClientName\": \"Test C Client\" }}]");
+
+		msg = bpws_new_msg_request_server_info("C Example");
+		l += bpws_format_msg((char *)&buf[LWS_PRE + l], bufsize, msg);
+		bpws_delete_msg(msg);
+
 		n = lws_write(wsi, &buf[LWS_PRE], l, opts | LWS_WRITE_TEXT);
 		if (n < 0)
 			return -1;
@@ -91,6 +99,19 @@ callback_lws_buttplug(struct lws *wsi, enum lws_callback_reasons reason,
 	case LWS_CALLBACK_CLIENT_RECEIVE:
 		((char *)in)[len] = '\0';
 		lwsl_notice("rx %d '%s'\n", (int)len, (char *)in);
+		msgs = bpws_parse_msgs(in);
+		if (msgs)
+		{
+			for (i = 0; (msg = msgs[i]); i++)
+			{
+				lwsl_notice("Buttplug message (Id:%d, Idx:%d) type: %d\n", msg->id, i, msg->type);
+			}
+		}
+		else
+		{
+			lwsl_notice("Error parsing messages!\n");
+		}
+		bpws_delete_msgs(msgs);
 		break;
 
 

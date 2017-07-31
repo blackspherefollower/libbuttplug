@@ -237,11 +237,13 @@ struct bpws_t {
 	size_t out_message_post_padding;
 };
 
-
-
-BPWS_EXPORT struct bpws_msg_base_t* bpws_parse_msg(char *jmsg);
 BPWS_EXPORT struct bpws_msg_request_server_info* bpws_new_msg_request_server_info(const char* client_name);
-BPWS_EXPORT void bpws_delete_msg(struct bpws_msg_base_t *msg);
+BPWS_EXPORT struct bpws_msg_base_t* bpws_parse_msg(char* jmsg);
+BPWS_EXPORT struct bpws_msg_base_t** bpws_parse_msgs(char* jmsg);
+BPWS_EXPORT void bpws_delete_msg(struct bpws_msg_base_t* msg);
+BPWS_EXPORT void bpws_delete_msgs(struct bpws_msg_base_t** msgs);
+BPWS_EXPORT size_t bpws_format_msg(char *buf, size_t bufsize, struct bpws_msg_base_t* msg);
+BPWS_EXPORT size_t bpws_format_msgs(char *buf, size_t bufsize, struct bpws_msg_base_t** msgs);
 
 BPWS_EXPORT struct bpws_t* bpws_create(void);
 BPWS_EXPORT void bpws_delete(struct bpws_t* bpws);

@@ -36,8 +36,6 @@ char* bpws_msg_names[] = {
 
 static long long bpws_get_id(struct json_object *jobj)
 {
-	int val_type;
-
 	json_object_object_foreach(jobj, key, val) {
 		if (!strncmp(key, "Id", 2) && json_object_get_type(val) == json_type_int)
 			return json_object_get_int64(val);
@@ -48,7 +46,6 @@ static long long bpws_get_id(struct json_object *jobj)
 
 static char* bpws_get_string(struct json_object *jobj, char *field)
 {
-	int val_type;
 	char *ret;
 	const char *str;
 
@@ -69,8 +66,6 @@ static char* bpws_get_string(struct json_object *jobj, char *field)
 
 static int bpws_get_double(struct json_object *jobj, char *field)
 {
-	int val_type;
-
 	json_object_object_foreach(jobj, key, val) {
 		if (!strncmp(key, field, strlen(field)) &&
 			json_object_get_type(val) == json_type_double)
@@ -82,8 +77,6 @@ static int bpws_get_double(struct json_object *jobj, char *field)
 
 static int bpws_get_int(struct json_object *jobj, char *field)
 {
-	int val_type;
-
 	json_object_object_foreach(jobj, key, val) {
 		if (!strncmp(key, field, strlen(field)) &&
 			json_object_get_type(val) == json_type_int)
@@ -95,10 +88,8 @@ static int bpws_get_int(struct json_object *jobj, char *field)
 
 static char** bpws_get_string_array(struct json_object *jobj, char *field)
 {
-	int val_type;
 	char **ret, **tmp;
 	const char *str;
-	const struct array_list *list;
 	int i, len, count;
 	struct json_object *jarray, *jvalue;
 
@@ -132,10 +123,7 @@ static char** bpws_get_string_array(struct json_object *jobj, char *field)
 
 struct bpws_msg_device_message_info** bpws_get_device_array(struct json_object *jobj, char *field)
 {
-	int val_type;
 	struct bpws_msg_device_message_info **ret, **tmp;
-	const char *str;
-	const struct array_list *list;
 	int i, len, count;
 	struct json_object *jarray, *jvalue;
 	unsigned long long id;
@@ -175,30 +163,15 @@ struct bpws_msg_device_message_info** bpws_get_device_array(struct json_object *
 	return ret;
 }
 
-struct bpws_msg_base_t* bpws_parse_msg(char *jmsg)
+static struct bpws_msg_base_t* bpws_parse_msg_json(struct json_object *jobj)
 {
-	struct json_object *jobj;
 	struct bpws_msg_base_t *msg;
-	char *val_type_str;
-	int val_type;
 	int msgType;
-	enum json_tokener_error error;
-
-	error = 0;
-	jobj = json_tokener_parse_verbose(jmsg, &error);
-	msg = 0;
-
-	if (!jobj)
-	{
-		// We expect this to be an object, if it isn't error out
-		return 0; // Would be better to construct an error object...
-	}
 
 	// key and val don't exist outside of this bloc
 	json_object_object_foreach(jobj, key, val) {
-		val_type = json_object_get_type(val);
 
-		if (val_type != json_type_object)
+		if (json_object_get_type(val) != json_type_object)
 		{
 			// We expect this to be an object, if it isn't error out
 			return 0; // Would be better to construct an error object...
@@ -335,6 +308,183 @@ struct bpws_msg_base_t* bpws_parse_msg(char *jmsg)
 	return msg;
 }
 
+struct bpws_msg_base_t* bpws_parse_msg(char *jmsg)
+{
+	struct json_object *jobj;
+	enum json_tokener_error error = 0;
+	struct bpws_msg_base_t* ret = 0;
+
+	jobj = json_tokener_parse_verbose(jmsg, &error);
+
+	if (!jobj || json_object_get_type(jobj) != json_type_object)
+	{
+		// We expect this to be an object, if it isn't error out
+		return 0; // Would be better to construct an error object...
+	}
+
+	ret = bpws_parse_msg_json(jobj);
+	json_object_put(jobj);
+	return ret;
+}
+
+struct bpws_msg_base_t** bpws_parse_msgs(char *jarr)
+{
+	struct json_object *jobj;
+	enum json_tokener_error error = 0;
+	struct bpws_msg_base_t** ret = 0;
+	int i = 0;
+
+	jobj = json_tokener_parse_verbose(jarr, &error);
+
+	if (!jobj || json_object_get_type(jobj) != json_type_array)
+	{
+		// We expect this to be an object, if it isn't error out
+		return 0; // Would be better to construct an error object...
+	}
+
+	ret = (struct bpws_msg_base_t**) malloc(sizeof(struct bpws_msg_base_t*) * (json_object_array_length(jobj) + 1));
+
+	for (i = 0; i < json_object_array_length(jobj); i++)
+	{
+		ret[i] = bpws_parse_msg_json(json_object_array_get_idx(jobj, i));
+	}
+	ret[i] = 0;
+
+	json_object_put(jobj);
+	return ret;
+}
+
+
+static struct json_object *bpws_format_msg_json(struct bpws_msg_base_t* msg)
+{
+	int len = 0;
+	struct json_object *jobj;
+	struct json_object *jobj2;
+
+	jobj = json_object_new_object();
+	jobj2 = json_object_new_object();
+
+	if (msg->type >= 0 && msg->type < BPWS_MSG_TYPE_LAST)
+	{
+		json_object_object_add(jobj, bpws_msg_names[msg->type], jobj2);
+	}
+	else
+	{
+		json_object_object_add(jobj, "Unknown", jobj2);
+	}
+	json_object_object_add(jobj2, "Id", json_object_new_int64(msg->id));
+
+	switch (msg->type)
+	{
+	case BPWS_MSG_TYPE_OK:
+		break;
+	case BPWS_MSG_TYPE_PING:
+		break;
+	case BPWS_MSG_TYPE_TEST:
+		json_object_object_add(jobj2, "TestString", json_object_new_string(((struct bpws_msg_test *)msg)->test_string));
+		break;
+	case BPWS_MSG_TYPE_ERROR:
+		json_object_object_add(jobj2, "ErrorCode", json_object_new_int(((struct bpws_msg_error *)msg)->error_code));
+		json_object_object_add(jobj2, "ErrorMessage", json_object_new_string(((struct bpws_msg_error *)msg)->error_message));
+		break;
+	case BPWS_MSG_TYPE_DEVICE_MESSAGE_INFO:
+		break;
+	case BPWS_MSG_TYPE_DEVICE_LIST:
+		break;
+	case BPWS_MSG_TYPE_DEVICE_ADDED:
+		break;
+	case BPWS_MSG_TYPE_DEVICE_REMOVED:
+		break;
+	case BPWS_MSG_TYPE_REQUEST_DEVICE_LIST:
+		break;
+	case BPWS_MSG_TYPE_START_SCANNING:
+		break;
+	case BPWS_MSG_TYPE_STOP_SCANNING:
+		break;
+	case BPWS_MSG_TYPE_SCANNING_FINISHED:
+		break;
+	case BPWS_MSG_TYPE_REQUEST_LOG:
+		break;
+	case BPWS_MSG_TYPE_LOG:
+		break;
+	case BPWS_MSG_TYPE_REQUEST_SERVER_INFO:
+		json_object_object_add(jobj2, "ClientName", json_object_new_string(((struct bpws_msg_request_server_info *)msg)->client_name));
+		break;
+	case BPWS_MSG_TYPE_SERVER_INFO:
+		json_object_object_add(jobj2, "MajorVersion", json_object_new_int(((struct bpws_msg_server_info *)msg)->major_version));
+		json_object_object_add(jobj2, "MinorVersion", json_object_new_int(((struct bpws_msg_server_info *)msg)->minor_version));
+		json_object_object_add(jobj2, "BuildVersion", json_object_new_int(((struct bpws_msg_server_info *)msg)->build_version));
+		json_object_object_add(jobj2, "MessageVersion", json_object_new_int(((struct bpws_msg_server_info *)msg)->message_version));
+		json_object_object_add(jobj2, "MaxPingTime", json_object_new_int(((struct bpws_msg_server_info *)msg)->max_ping_time));
+		json_object_object_add(jobj2, "ServerName", json_object_new_string(((struct bpws_msg_server_info *)msg)->server_name));
+		break;
+	case BPWS_MSG_TYPE_FLESHLIGHT_LAUNCH_FW12_CMD:
+		break;
+	case BPWS_MSG_TYPE_LOVENSE_CMD:
+		break;
+	case BPWS_MSG_TYPE_KIIROO_CMD:
+		break;
+	case BPWS_MSG_TYPE_VORZE_A10_CYCLONE_CMD:
+		break;
+	case BPWS_MSG_TYPE_SINGLE_MOTOR_VIBRATE_CMD:
+		break;
+	case BPWS_MSG_TYPE_STOP_DEVICE_CMD:
+		break;
+	case BPWS_MSG_TYPE_STOP_ALL_DEVICES:
+		break;
+	}
+}
+
+size_t bpws_format_msg(char *buf, size_t bufsize, struct bpws_msg_base_t* msg)
+{
+	struct json_object *jarr;
+	char *tmp;
+	size_t len;
+
+	jarr = json_object_new_array();
+	json_object_array_add(jarr, bpws_format_msg_json(msg));
+
+	tmp = json_object_to_json_string(jarr);
+	if (!tmp)
+	{
+		json_object_put(jarr);
+		return 0;
+	}
+
+	len = strlen(tmp);
+	strncpy(buf, tmp, bufsize);
+
+	json_object_put(jarr);
+	return len + 1;
+}
+
+size_t bpws_format_msgs(char *buf, size_t bufsize, struct bpws_msg_base_t** msgs)
+{
+	struct json_object *jarr;
+	int i;
+	char *tmp;
+	size_t len;
+
+	jarr = json_object_new_array();
+	for (i = 0; msgs[i]; i++)
+	{
+		json_object_array_add(jarr, bpws_format_msg_json(msgs[i]));
+	}
+
+	tmp = json_object_to_json_string(jarr);
+	if (!tmp)
+	{
+		json_object_put(jarr);
+		return 0;
+	}
+
+	len = strlen(tmp);
+	strncpy(buf, tmp, bufsize);
+
+	json_object_put(jarr);
+	return len + 1;
+}
+
 struct bpws_msg_request_server_info* bpws_new_msg_request_server_info(const char* client_name)
 {
 	struct bpws_msg_request_server_info *msg;
@@ -444,6 +594,14 @@ void bpws_delete_msg(struct bpws_msg_base_t *msg)
 		free((struct bpws_msg_stop_all_devices *) msg);
 		break;
 	}
+}
+
+void bpws_delete_msgs(struct bpws_msg_base_t **msgs)
+{
+	int i;
+	for (i = 0; msgs[i]; i++)
+		bpws_delete_msg(msgs[i]);
+	free(msgs);
 }
 
 
