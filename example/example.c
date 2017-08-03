@@ -45,6 +45,12 @@ static volatile int force_exit;
 static unsigned int opts, rl_multi[3];
 static int flag_no_mirror_traffic;
 
+struct lws_buttplug_data {
+	int state;
+	size_t len;
+	char* data;
+};
+
 void sighandler(int sig)
 {
 	force_exit = 1;
@@ -54,18 +60,25 @@ static int
 callback_lws_buttplug(struct lws *wsi, enum lws_callback_reasons reason,
 	void *user, void *in, size_t len)
 {
-	int bufsize = LWS_PRE + 4096;
+	int bufsize = 4096;
 	unsigned char buf[LWS_PRE + 4096];
+	struct lws_buttplug_data *data = user;
 	int l = 0;
 	int n;
 	int i;
 	struct bpws_msg_base_t **msgs = 0;
 	struct bpws_msg_base_t *msg = 0;
+	char* tmp;
 
 	switch (reason) {
 	case LWS_CALLBACK_CLIENT_ESTABLISHED:
 
 		lwsl_notice("butplug: LWS_CALLBACK_CLIENT_ESTABLISHED\n");
+
+		data->state = 0;
+		data->data = 0;
+		data->len = 0;
+
 		/*
 		 * start the ball rolling,
 		 * LWS_CALLBACK_CLIENT_WRITEABLE will come next service
@@ -84,7 +97,7 @@ callback_lws_buttplug(struct lws *wsi, enum lws_callback_reasons reason,
 			return 0;
 
 		msg = bpws_new_msg_request_server_info("C Example");
-		l += bpws_format_msg((char *)&buf[LWS_PRE + l], bufsize, msg);
+		l += bpws_format_msg((char *)&buf[LWS_PRE + l], bufsize - l, msg);
 		bpws_delete_msg(msg);
 
 		n = lws_write(wsi, &buf[LWS_PRE], l, opts | LWS_WRITE_TEXT);
@@ -99,7 +112,40 @@ callback_lws_buttplug(struct lws *wsi, enum lws_callback_reasons reason,
 	case LWS_CALLBACK_CLIENT_RECEIVE:
 		((char *)in)[len] = '\0';
 		lwsl_notice("rx %d '%s'\n", (int)len, (char *)in);
-		msgs = bpws_parse_msgs(in);
+
+		if (data->data)
+		{
+			tmp = (char*)realloc(data->data, data->len + len + 1);
+			if (tmp)
+			{
+				data->data = tmp;
+				memcpy(data->data + data->len, in, len + 1);
+			}
+			else
+				data->state = 1;
+		}
+		else
+		{
+			data->len = 0;
+			data->data = (char*)malloc(len + 1);
+			memcpy(data->data, in, len + 1);
+		}
+
+		data->len += len;
+
+		if (lws_is_final_fragment(wsi))
+			data->state = 1;
+
+		if (data->state == 0)
+			break;
+
+		msgs = bpws_parse_msgs(data->data);
+
+		free(data->data);
+		data->data = 0;
+		data->len = 0;
+		data->state = 0;
+
 		if (msgs)
 		{
 			for (i = 0; (msg = msgs[i]); i++)
@@ -223,7 +269,7 @@ static const struct lws_protocols protocols[] = {
 	{
 		"buttplug",
 		callback_lws_buttplug,
-		0,
+		sizeof(struct lws_buttplug_data),
 		20,
 	},
 	{ NULL, NULL, 0, 0 } /* end */

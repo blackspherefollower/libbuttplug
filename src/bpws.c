@@ -433,6 +433,8 @@ static struct json_object *bpws_format_msg_json(struct bpws_msg_base_t* msg)
 	case BPWS_MSG_TYPE_STOP_ALL_DEVICES:
 		break;
 	}
+
+	return jobj;
 }
 
 size_t bpws_format_msg(char *buf, size_t bufsize, struct bpws_msg_base_t* msg)
@@ -455,7 +457,7 @@ size_t bpws_format_msg(char *buf, size_t bufsize, struct bpws_msg_base_t* msg)
 	strncpy(buf, tmp, bufsize);
 
 	json_object_put(jarr);
-	return len + 1;
+	return len;
 }
 
 size_t bpws_format_msgs(char *buf, size_t bufsize, struct bpws_msg_base_t** msgs)
@@ -482,13 +484,15 @@ size_t bpws_format_msgs(char *buf, size_t bufsize, struct bpws_msg_base_t** msgs
 	strncpy(buf, tmp, bufsize);
 
 	json_object_put(jarr);
-	return len + 1;
+	return len;
 }
 
 struct bpws_msg_request_server_info* bpws_new_msg_request_server_info(const char* client_name)
 {
 	struct bpws_msg_request_server_info *msg;
 	msg = (struct bpws_msg_request_server_info *) malloc(sizeof(struct bpws_msg_request_server_info));
+	msg->type = BPWS_MSG_TYPE_REQUEST_SERVER_INFO;
+	msg->id = 1;
 	msg->client_name = (char *)malloc(strlen(client_name) + 1);
 	strcpy(msg->client_name, client_name);
 	return msg;
@@ -599,6 +603,8 @@ void bpws_delete_msg(struct bpws_msg_base_t *msg)
 void bpws_delete_msgs(struct bpws_msg_base_t **msgs)
 {
 	int i;
+	if (!msgs)
+		return;
 	for (i = 0; msgs[i]; i++)
 		bpws_delete_msg(msgs[i]);
 	free(msgs);
