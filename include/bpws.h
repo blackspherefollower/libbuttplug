@@ -48,7 +48,6 @@ enum bpws_msg_type_t {
 	BPWS_MSG_TYPE_PING,
 	BPWS_MSG_TYPE_TEST,
 	BPWS_MSG_TYPE_ERROR,
-	BPWS_MSG_TYPE_DEVICE_MESSAGE_INFO,
 	BPWS_MSG_TYPE_DEVICE_LIST,
 	BPWS_MSG_TYPE_DEVICE_ADDED,
 	BPWS_MSG_TYPE_DEVICE_REMOVED,
@@ -106,9 +105,7 @@ struct bpws_msg_error {
 	enum error_class error_code;
 };
 
-struct bpws_msg_device_message_info {
-	enum bpws_msg_type_t type;
-	long long id;
+struct bpws_device_message_info {
 	char* device_name;
 	unsigned int device_index;
 	char** device_messages;
@@ -117,7 +114,7 @@ struct bpws_msg_device_message_info {
 struct bpws_msg_device_list {
 	enum bpws_msg_type_t type;
 	long long id;
-	struct bpws_msg_device_message_info **devices;
+	struct bpws_device_message_info **devices;
 };
 
 struct bpws_msg_device_added {

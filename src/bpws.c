@@ -12,7 +12,6 @@ char* bpws_msg_names[] = {
 	"Ping",
 	"Test",
 	"Error",
-	"DeviceMessageInfo",
 	"DeviceList",
 	"DeviceAdded",
 	"DeviceRemoved",
@@ -121,14 +120,14 @@ static char** bpws_get_string_array(struct json_object *jobj, char *field)
 	return ret;
 }
 
-struct bpws_msg_device_message_info** bpws_get_device_array(struct json_object *jobj, char *field)
+struct bpws_device_message_info** bpws_get_device_array(struct json_object *jobj, char *field)
 {
-	struct bpws_msg_device_message_info **ret, **tmp;
+	struct bpws_device_message_info **ret, **tmp;
 	int i, len, count;
 	struct json_object *jarray, *jvalue;
 	unsigned long long id;
 
-	ret = (struct bpws_msg_device_message_info**)malloc(sizeof(struct bpws_msg_device_message_info*));
+	ret = (struct bpws_device_message_info**)malloc(sizeof(struct bpws_device_message_info*));
 	ret[0] = 0;
 
 	jarray = json_object_object_get(jobj, field);
@@ -144,18 +143,16 @@ struct bpws_msg_device_message_info** bpws_get_device_array(struct json_object *
 		if (json_object_get_type(jvalue) == json_type_object)
 		{
 			count++;
-			tmp = (struct bpws_msg_device_message_info**)realloc(ret, sizeof(struct bpws_msg_device_message_info*) * (count + 1));
+			tmp = (struct bpws_device_message_info**)realloc(ret, sizeof(struct bpws_device_message_info*) * (count + 1));
 			if (tmp)
 				ret = tmp;
 			else
 				return ret; // we can go no further
 
-			ret[count - 1] = (struct bpws_msg_device_message_info *) malloc(sizeof(struct bpws_msg_device_message_info));
-			((struct bpws_msg_device_message_info *) ret[count - 1])->device_name = bpws_get_string(jvalue, "DeviceName");
-			((struct bpws_msg_device_message_info *) ret[count - 1])->device_index = bpws_get_int(jvalue, "DeviceIndex");
-			((struct bpws_msg_device_message_info *) ret[count - 1])->device_messages = bpws_get_string_array(jvalue, "DeviceMessages");
-			((struct bpws_msg_device_message_info *) ret[count - 1])->id = id;
-			((struct bpws_msg_device_message_info *) ret[count - 1])->type = BPWS_MSG_TYPE_DEVICE_MESSAGE_INFO;
+			ret[count - 1] = (struct bpws_device_message_info *) malloc(sizeof(struct bpws_device_message_info));
+			((struct bpws_device_message_info *) ret[count - 1])->device_name = bpws_get_string(jvalue, "DeviceName");
+			((struct bpws_device_message_info *) ret[count - 1])->device_index = bpws_get_int(jvalue, "DeviceIndex");
+			((struct bpws_device_message_info *) ret[count - 1])->device_messages = bpws_get_string_array(jvalue, "DeviceMessages");
 			ret[count] = 0;
 		}
 	}
@@ -207,12 +204,6 @@ static struct bpws_msg_base_t* bpws_parse_msg_json(struct json_object *jobj)
 			msg = (struct bpws_msg_base_t *) malloc(sizeof(struct bpws_msg_error));
 			((struct bpws_msg_error *) msg)->error_message = bpws_get_string(val, "ErrorMessage");
 			((struct bpws_msg_error *) msg)->error_code = bpws_get_int(val, "ErrorCode");
-			break;
-		case BPWS_MSG_TYPE_DEVICE_MESSAGE_INFO:
-			msg = (struct bpws_msg_base_t *) malloc(sizeof(struct bpws_msg_device_message_info));
-			((struct bpws_msg_device_message_info *) msg)->device_name = bpws_get_string(val, "DeviceName");
-			((struct bpws_msg_device_message_info *) msg)->device_index = bpws_get_int(val, "DeviceIndex");
-			((struct bpws_msg_device_message_info *) msg)->device_messages = bpws_get_string_array(val, "DeviceMessages");
 			break;
 		case BPWS_MSG_TYPE_DEVICE_LIST:
 			msg = (struct bpws_msg_base_t *) malloc(sizeof(struct bpws_msg_device_list));
@@ -355,11 +346,32 @@ struct bpws_msg_base_t** bpws_parse_msgs(char *jarr)
 }
 
 
+static struct json_object *bpws_format_dmi_json(struct bpws_device_message_info* dmi)
+{
+	struct json_object *jobj;
+	struct json_object *jarr;
+	int i;
+
+	jobj = json_object_new_object();
+	json_object_object_add(jobj, "DeviceIndex", json_object_new_int(dmi->device_index));
+	json_object_object_add(jobj, "DeviceName", json_object_new_string(dmi->device_name));
+	jarr = json_object_new_array();
+	for (i = 0; dmi->device_messages[i]; i++)
+	{
+		json_object_array_add(jarr, json_object_new_string(dmi->device_messages[i]));
+	}
+	json_object_object_add(jobj, "DeviceMessages", jarr);
+
+	return jobj;
+}
+
 static struct json_object *bpws_format_msg_json(struct bpws_msg_base_t* msg)
 {
 	int len = 0;
 	struct json_object *jobj;
 	struct json_object *jobj2;
+	struct json_object *jarr;
+	int i;
 
 	jobj = json_object_new_object();
 	jobj2 = json_object_new_object();
@@ -387,13 +399,26 @@ static struct json_object *bpws_format_msg_json(struct bpws_msg_base_t* msg)
 		json_object_object_add(jobj2, "ErrorCode", json_object_new_int(((struct bpws_msg_error *)msg)->error_code));
 		json_object_object_add(jobj2, "ErrorMessage", json_object_new_string(((struct bpws_msg_error *)msg)->error_message));
 		break;
-	case BPWS_MSG_TYPE_DEVICE_MESSAGE_INFO:
-		break;
 	case BPWS_MSG_TYPE_DEVICE_LIST:
+		jarr = json_object_new_array();
+		for (i = 0; ((struct bpws_msg_device_list *) msg)->devices[i]; i++)
+		{
+			json_object_array_add(jarr, bpws_format_dmi_json(((struct bpws_msg_device_list *) msg)->devices[i]));
+		}
+		json_object_object_add(jobj2, "Devices", jarr);
 		break;
 	case BPWS_MSG_TYPE_DEVICE_ADDED:
+		json_object_object_add(jobj2, "DeviceIndex", json_object_new_int(((struct bpws_msg_device_added *)msg)->device_index));
+		json_object_object_add(jobj2, "DeviceName", json_object_new_string(((struct bpws_msg_device_added *)msg)->device_name));
+		jarr = json_object_new_array();
+		for (i = 0; ((struct bpws_msg_device_added *) msg)->device_messages[i]; i++)
+		{
+			json_object_array_add(jarr, json_object_new_string(((struct bpws_msg_device_added *) msg)->device_messages[i]));
+		}
+		json_object_object_add(jobj2, "DeviceMessages", jarr);
 		break;
 	case BPWS_MSG_TYPE_DEVICE_REMOVED:
+		json_object_object_add(jobj2, "DeviceIndex", json_object_new_int(((struct bpws_msg_device_removed *)msg)->device_index));
 		break;
 	case BPWS_MSG_TYPE_REQUEST_DEVICE_LIST:
 		break;
@@ -404,8 +429,11 @@ static struct json_object *bpws_format_msg_json(struct bpws_msg_base_t* msg)
 	case BPWS_MSG_TYPE_SCANNING_FINISHED:
 		break;
 	case BPWS_MSG_TYPE_REQUEST_LOG:
+		json_object_object_add(jobj2, "LogLevel", json_object_new_string(((struct bpws_msg_request_log *)msg)->log_level));
 		break;
 	case BPWS_MSG_TYPE_LOG:
+		json_object_object_add(jobj2, "LogLevel", json_object_new_string(((struct bpws_msg_log *)msg)->log_level));
+		json_object_object_add(jobj2, "LogMessage", json_object_new_string(((struct bpws_msg_log *)msg)->log_message));
 		break;
 	case BPWS_MSG_TYPE_REQUEST_SERVER_INFO:
 		json_object_object_add(jobj2, "ClientName", json_object_new_string(((struct bpws_msg_request_server_info *)msg)->client_name));
@@ -419,16 +447,29 @@ static struct json_object *bpws_format_msg_json(struct bpws_msg_base_t* msg)
 		json_object_object_add(jobj2, "ServerName", json_object_new_string(((struct bpws_msg_server_info *)msg)->server_name));
 		break;
 	case BPWS_MSG_TYPE_FLESHLIGHT_LAUNCH_FW12_CMD:
+		json_object_object_add(jobj2, "DeviceIndex", json_object_new_int(((struct bpws_msg_fleshlight_launch_fw12_cmd *)msg)->device_index));
+		json_object_object_add(jobj2, "Speed", json_object_new_int(((struct bpws_msg_fleshlight_launch_fw12_cmd *)msg)->speed));
+		json_object_object_add(jobj2, "Position", json_object_new_int(((struct bpws_msg_fleshlight_launch_fw12_cmd *)msg)->position));
 		break;
 	case BPWS_MSG_TYPE_LOVENSE_CMD:
+		json_object_object_add(jobj2, "DeviceIndex", json_object_new_int(((struct bpws_msg_lovense_cmd *)msg)->device_index));
+		json_object_object_add(jobj2, "Command", json_object_new_string(((struct bpws_msg_lovense_cmd *)msg)->command));
 		break;
 	case BPWS_MSG_TYPE_KIIROO_CMD:
+		json_object_object_add(jobj2, "DeviceIndex", json_object_new_int(((struct bpws_msg_kiiroo_cmd *)msg)->device_index));
+		json_object_object_add(jobj2, "Command", json_object_new_string(((struct bpws_msg_kiiroo_cmd *)msg)->command));
 		break;
 	case BPWS_MSG_TYPE_VORZE_A10_CYCLONE_CMD:
+		json_object_object_add(jobj2, "DeviceIndex", json_object_new_int(((struct bpws_msg_vorze_a10_cyclone_cmd *)msg)->device_index));
+		json_object_object_add(jobj2, "Speed", json_object_new_int(((struct bpws_msg_vorze_a10_cyclone_cmd *)msg)->speed));
+		json_object_object_add(jobj2, "Clockwise", json_object_new_int(((struct bpws_msg_vorze_a10_cyclone_cmd *)msg)->clockwise));
 		break;
 	case BPWS_MSG_TYPE_SINGLE_MOTOR_VIBRATE_CMD:
+		json_object_object_add(jobj2, "DeviceIndex", json_object_new_int(((struct bpws_msg_single_motor_vibrate_cmd *)msg)->device_index));
+		json_object_object_add(jobj2, "Speed", json_object_new_double(((struct bpws_msg_single_motor_vibrate_cmd *)msg)->speed));
 		break;
 	case BPWS_MSG_TYPE_STOP_DEVICE_CMD:
+		json_object_object_add(jobj2, "DeviceIndex", json_object_new_int(((struct bpws_msg_stop_device_cmd *)msg)->device_index));
 		break;
 	case BPWS_MSG_TYPE_STOP_ALL_DEVICES:
 		break;
@@ -498,6 +539,19 @@ struct bpws_msg_request_server_info* bpws_new_msg_request_server_info(const char
 	return msg;
 }
 
+static void bpws_delete_dmi(struct bpws_device_message_info *dmi)
+{
+	int i;
+	void **arr;
+
+	arr = dmi->device_messages;
+	for (i = 0; arr[i]; i++)
+		free(((char**)arr)[i]);
+	free((char**)arr);
+	free(dmi->device_name);
+	free(dmi);
+}
+
 void bpws_delete_msg(struct bpws_msg_base_t *msg)
 {
 	int i;
@@ -519,19 +573,11 @@ void bpws_delete_msg(struct bpws_msg_base_t *msg)
 		free(((struct bpws_msg_error *) msg)->error_message);
 		free((struct bpws_msg_error *) msg);
 		break;
-	case BPWS_MSG_TYPE_DEVICE_MESSAGE_INFO:
-		arr = ((struct bpws_msg_device_message_info *) msg)->device_messages;
-		for (i = 0; arr[i]; i++)
-			free(((char**)arr)[i]);
-		free((char**)arr);
-		free(((struct bpws_msg_device_message_info *) msg)->device_name);
-		free((struct bpws_msg_device_message_info *) msg);
-		break;
 	case BPWS_MSG_TYPE_DEVICE_LIST:
 		arr = ((struct bpws_msg_device_list *) msg)->devices;
 		for (i = 0; arr[i]; i++)
-			bpws_delete_msg(arr[i]);
-		free((struct bpws_msg_device_message_info **)arr);
+			bpws_delete_dmi(arr[i]);
+		free((struct bpws_device_message_info **)arr);
 		free((struct bpws_msg_device_list *) msg);
 		break;
 	case BPWS_MSG_TYPE_DEVICE_ADDED:
