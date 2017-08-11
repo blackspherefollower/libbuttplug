@@ -103,8 +103,16 @@ END_TEST
 START_TEST(string_2_device_list_message)
 {
 	struct bpws_device_message_info *dev;
-	char *in = "{\"DeviceList\": {\"Id\": 5, \"Devices\": [{ \"DeviceName\": \"foo\", \"DeviceIndex\": 6, \"DeviceMessages\": [ \"foo_cmd_1\", \"foo_cmd_2\" ]}, { \"DeviceName\": \"bar\", \"DeviceIndex\": 7, \"DeviceMessages\": [ \"bar_cmd_1\", \"bar_cmd_2\" ]}]}}";
-	struct bpws_msg_base_t *msg = bpws_parse_msg(in);
+	char *in = "[ { \"DeviceList\": { \"Id\": 5, \"Devices\": [ { \"DeviceIndex\": 6, \"DeviceName\": \"foo\", \"DeviceMessages\": [ \"foo_cmd_1\", \"foo_cmd_2\" ] }, { \"DeviceIndex\": 7, \"DeviceName\": \"bar\", \"DeviceMessages\": [ \"bar_cmd_1\", \"bar_cmd_2\" ] } ] } } ]";
+	struct bpws_msg_base_t *msg, **msgs;
+	char out[512];
+
+	msgs = bpws_parse_msgs(in);
+	ck_assert_int_ne(msgs, 0);
+	ck_assert_int_ne(msgs[0], 0);
+	ck_assert_int_eq(msgs[1], 0);
+
+	msg = msgs[0];
 	ck_assert_int_ne(msg, 0);
 	ck_assert_int_eq(msg->id, 5);
 	ck_assert_int_eq(msg->type, BPWS_MSG_TYPE_DEVICE_LIST);
@@ -134,7 +142,13 @@ START_TEST(string_2_device_list_message)
 	ck_assert_str_eq(dev->device_messages[0], "bar_cmd_1");
 	ck_assert_str_eq(dev->device_messages[1], "bar_cmd_2");
 
-	bpws_delete_msg(msg);
+	ck_assert_int_eq(bpws_format_msg(out, 512, msg), 230);
+	ck_assert_str_eq(out, in);
+
+	ck_assert_int_eq(bpws_format_msgs(out, 512, msgs), 230);
+	ck_assert_str_eq(out, in);
+
+	bpws_delete_msgs(msgs);
 }
 END_TEST
 
