@@ -44,6 +44,10 @@ static struct lws *wsi_mirror;
 static volatile int force_exit;
 static unsigned int opts, rl_multi[3];
 static int flag_no_mirror_traffic;
+static int requested_server_info;
+static struct timeval last_ping;
+static unsigned int ping_interval;
+static long long msgId;
 
 struct lws_buttplug_data {
 	int state;
@@ -54,6 +58,24 @@ struct lws_buttplug_data {
 void sighandler(int sig)
 {
 	force_exit = 1;
+}
+
+static int need_ping(struct timeval *last, unsigned int interval)
+{
+	if (!interval)
+		return 0;
+
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+
+	if ((tv.tv_sec - last->tv_sec) <= (interval / 1000000) &&
+		(tv.tv_usec - last->tv_usec) < interval)
+		return 0;
+
+	last->tv_sec = tv.tv_sec;
+	last->tv_usec = tv.tv_usec;
+
+	return 1;
 }
 
 static int
@@ -69,6 +91,7 @@ callback_lws_buttplug(struct lws *wsi, enum lws_callback_reasons reason,
 	struct bpws_msg_base_t **msgs = 0;
 	struct bpws_msg_base_t *msg = 0;
 	char* tmp;
+	int now;
 
 	switch (reason) {
 	case LWS_CALLBACK_CLIENT_ESTABLISHED:
@@ -96,14 +119,30 @@ callback_lws_buttplug(struct lws *wsi, enum lws_callback_reasons reason,
 		if (flag_no_mirror_traffic)
 			return 0;
 
-		msg = bpws_new_msg_request_server_info("C Example");
+		if (!requested_server_info)
+		{
+			msg = bpws_new_msg_request_server_info("C Example");
+			requested_server_info++;
+		}
+		else if (need_ping(&last_ping, ping_interval))
+		{
+			msg = bpws_new_msg_ping(++msgId);
+		}
+		else
+		{
+			// service send queue?
+			lws_callback_on_writable(wsi);
+			break;
+		}
+
 		l += bpws_format_msg((char *)&buf[LWS_PRE + l], bufsize - l, msg);
 		bpws_delete_msg(msg);
 
 		n = lws_write(wsi, &buf[LWS_PRE], l, opts | LWS_WRITE_TEXT);
 		if (n < 0)
 			return -1;
-		if (n < l) {
+		if (n < l)
+		{
 			lwsl_err("Partial write LWS_CALLBACK_CLIENT_WRITEABLE\n");
 			return -1;
 		}
@@ -150,6 +189,10 @@ callback_lws_buttplug(struct lws *wsi, enum lws_callback_reasons reason,
 		{
 			for (i = 0; (msg = msgs[i]); i++)
 			{
+				if (msg->type == BPWS_MSG_TYPE_SERVER_INFO)
+				{
+					ping_interval = ((struct bpws_msg_server_info *)msg)->max_ping_time * 500;
+				}
 				lwsl_notice("Buttplug message (Id:%d, Idx:%d) type: %d\n", msg->id, i, msg->type);
 			}
 		}
@@ -158,6 +201,7 @@ callback_lws_buttplug(struct lws *wsi, enum lws_callback_reasons reason,
 			lwsl_notice("Error parsing messages!\n");
 		}
 		bpws_delete_msgs(msgs);
+		lws_callback_on_writable(wsi);
 		break;
 
 
@@ -316,6 +360,12 @@ int main(int argc, char **argv)
 	char key_path[1024] = "";
 	char ca_path[1024] = "";
 
+	requested_server_info = 0;
+	msgId = 1;
+	ping_interval = 0;
+	last_ping.tv_sec = 0;
+	last_ping.tv_usec = 0;
+
 	signal(SIGINT, sighandler);
 
 	memset(&info, 0, sizeof info);
@@ -441,7 +491,11 @@ int main(int argc, char **argv)
 	m = 0;
 	while (!force_exit && wsi_mirror) {
 
-		lws_service(context, 500);
+		lws_service(context, 50);
+		if (i.userdata)
+		{
+			lwsl_notice("buttplug: userdata! %s\n", (((struct lws_buttplug_data*)i.userdata)->data ? ((struct lws_buttplug_data*)i.userdata)->data : "<empty>"));
+		}
 	}
 
 	lwsl_err("Exiting\n");

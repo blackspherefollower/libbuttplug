@@ -235,6 +235,7 @@ struct bpws_t {
 };
 
 BPWS_EXPORT struct bpws_msg_request_server_info* bpws_new_msg_request_server_info(const char* client_name);
+BPWS_EXPORT struct bpws_msg_ping* bpws_new_msg_ping(long long msgId);
 BPWS_EXPORT struct bpws_msg_base_t* bpws_parse_msg(char* jmsg);
 BPWS_EXPORT struct bpws_msg_base_t** bpws_parse_msgs(char* jmsg);
 BPWS_EXPORT void bpws_delete_msg(struct bpws_msg_base_t* msg);

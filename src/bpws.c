@@ -539,6 +539,15 @@ struct bpws_msg_request_server_info* bpws_new_msg_request_server_info(const char
 	return msg;
 }
 
+struct bpws_msg_ping* bpws_new_msg_ping(long long msgId)
+{
+	struct bpws_msg_ping *msg;
+	msg = (struct bpws_msg_ping *) malloc(sizeof(struct bpws_msg_ping));
+	msg->type = BPWS_MSG_TYPE_PING;
+	msg->id = msgId;
+	return msg;
+}
+
 static void bpws_delete_dmi(struct bpws_device_message_info *dmi)
 {
 	int i;
