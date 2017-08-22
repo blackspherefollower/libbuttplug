@@ -234,8 +234,29 @@ struct bpws_t {
 	size_t out_message_post_padding;
 };
 
+BPWS_EXPORT struct bpws_msg_ok* bpws_new_msg_ok(long long msg_id);
+BPWS_EXPORT struct bpws_msg_ping* bpws_new_msg_ping(long long msg_id);
+BPWS_EXPORT struct bpws_msg_test* bpws_new_msg_test(long long msg_id, const char* test_string);
+BPWS_EXPORT struct bpws_msg_error* bpws_new_msg_error(long long msg_id, enum error_class error_code, const char* error_message);
+/*BPWS_MSG_TYPE_DEVICE_LIST,
+BPWS_MSG_TYPE_DEVICE_ADDED,
+BPWS_MSG_TYPE_DEVICE_REMOVED,*/
+BPWS_EXPORT struct bpws_msg_request_device_list* bpws_new_msg_request_device_list(long long msg_id);
+BPWS_EXPORT struct bpws_msg_start_scanning* bpws_new_msg_start_scanning(long long msg_id);
+BPWS_EXPORT struct bpws_msg_stop_scanning* bpws_new_msg_stop_scanning(long long msg_id);
+BPWS_EXPORT struct bpws_msg_scanning_finished* bpws_new_msg_scanning_finished(long long msg_id);
+BPWS_EXPORT struct bpws_msg_request_log* bpws_new_msg_request_log(long long msg_id, const char *log_level);
+BPWS_EXPORT struct bpws_msg_log* bpws_new_msg_log(long long msg_id, const char *log_level, const char* log_message);
 BPWS_EXPORT struct bpws_msg_request_server_info* bpws_new_msg_request_server_info(const char* client_name);
-BPWS_EXPORT struct bpws_msg_ping* bpws_new_msg_ping(long long msgId);
+/*BPWS_MSG_TYPE_SERVER_INFO,
+BPWS_MSG_TYPE_FLESHLIGHT_LAUNCH_FW12_CMD,
+BPWS_MSG_TYPE_LOVENSE_CMD,
+BPWS_MSG_TYPE_KIIROO_CMD,
+BPWS_MSG_TYPE_VORZE_A10_CYCLONE_CMD,
+BPWS_MSG_TYPE_SINGLE_MOTOR_VIBRATE_CMD,*/
+BPWS_EXPORT struct bpws_msg_stop_device_cmd* bpws_new_msg_stop_device_cmd(long long msg_id, long long device_index);
+BPWS_EXPORT struct bpws_msg_stop_all_devices* bpws_new_msg_stop_all_devices(long long msg_id);
+
 BPWS_EXPORT struct bpws_msg_base_t* bpws_parse_msg(char* jmsg);
 BPWS_EXPORT struct bpws_msg_base_t** bpws_parse_msgs(char* jmsg);
 BPWS_EXPORT void bpws_delete_msg(struct bpws_msg_base_t* msg);

@@ -528,6 +528,112 @@ size_t bpws_format_msgs(char *buf, size_t bufsize, struct bpws_msg_base_t** msgs
 	return len;
 }
 
+struct bpws_msg_ping* bpws_new_msg_ping(long long msg_id)
+{
+	struct bpws_msg_ping *msg;
+	msg = (struct bpws_msg_ping *) malloc(sizeof(struct bpws_msg_ping));
+	msg->type = BPWS_MSG_TYPE_PING;
+	msg->id = msg_id;
+	return msg;
+}
+
+struct bpws_msg_ok* bpws_new_msg_ok(long long msg_id)
+{
+	struct bpws_msg_ok *msg;
+	msg = (struct bpws_msg_ok *) malloc(sizeof(struct bpws_msg_ok));
+	msg->type = BPWS_MSG_TYPE_OK;
+	msg->id = msg_id;
+	return msg;
+}
+
+struct bpws_msg_test* bpws_new_msg_test(long long msg_id, const char* test_string)
+{
+	struct bpws_msg_test *msg;
+	msg = (struct bpws_msg_test *) malloc(sizeof(struct bpws_msg_test));
+	msg->type = BPWS_MSG_TYPE_TEST;
+	msg->id = msg_id;
+	msg->test_string = (char*)malloc(strlen(test_string) + 1);
+	strcpy(msg->test_string, test_string);
+	return msg;
+}
+
+struct bpws_msg_error* bpws_new_msg_error(long long msg_id, enum error_class error_code, const char* error_message)
+{
+	struct bpws_msg_error *msg;
+	msg = (struct bpws_msg_error *) malloc(sizeof(struct bpws_msg_error));
+	msg->type = BPWS_MSG_TYPE_ERROR;
+	msg->id = msg_id;
+	msg->error_code = error_code;
+	msg->error_message = (char*)malloc(strlen(error_message) + 1);
+	strcpy(msg->error_message, error_message);
+	return msg;
+}
+
+/*
+BPWS_MSG_TYPE_DEVICE_LIST,
+BPWS_MSG_TYPE_DEVICE_ADDED,
+BPWS_MSG_TYPE_DEVICE_REMOVED,*/
+
+struct bpws_msg_request_device_list* bpws_new_msg_request_device_list(long long msg_id)
+{
+	struct bpws_msg_request_device_list *msg;
+	msg = (struct bpws_msg_request_device_list *) malloc(sizeof(struct bpws_msg_request_device_list));
+	msg->type = BPWS_MSG_TYPE_REQUEST_DEVICE_LIST;
+	msg->id = msg_id;
+	return msg;
+}
+
+struct bpws_msg_start_scanning* bpws_new_msg_start_scanning(long long msg_id)
+{
+	struct bpws_msg_start_scanning *msg;
+	msg = (struct bpws_msg_start_scanning *) malloc(sizeof(struct bpws_msg_start_scanning));
+	msg->type = BPWS_MSG_TYPE_START_SCANNING;
+	msg->id = msg_id;
+	return msg;
+}
+
+struct bpws_msg_stop_scanning* bpws_new_msg_stop_scanning(long long msg_id)
+{
+	struct bpws_msg_stop_scanning *msg;
+	msg = (struct bpws_msg_stop_scanning *) malloc(sizeof(struct bpws_msg_stop_scanning));
+	msg->type = BPWS_MSG_TYPE_STOP_SCANNING;
+	msg->id = msg_id;
+	return msg;
+}
+
+struct bpws_msg_scanning_finished* bpws_new_msg_scanning_finished(long long msg_id)
+{
+	struct bpws_msg_scanning_finished *msg;
+	msg = (struct bpws_msg_scanning_finished *) malloc(sizeof(struct bpws_msg_scanning_finished));
+	msg->type = BPWS_MSG_TYPE_SCANNING_FINISHED;
+	msg->id = msg_id;
+	return msg;
+}
+
+struct bpws_msg_request_log* bpws_new_msg_request_log(long long msg_id, const char *log_level)
+{
+	struct bpws_msg_request_log *msg;
+	msg = (struct bpws_msg_request_log *) malloc(sizeof(struct bpws_msg_request_log));
+	msg->type = BPWS_MSG_TYPE_REQUEST_LOG;
+	msg->id = msg_id;
+	msg->log_level = (char*)malloc(strlen(log_level));
+	strcpy(msg->log_level, log_level);
+	return msg;
+}
+
+struct bpws_msg_log* bpws_new_msg_log(long long msg_id, const char *log_level, const char* log_message)
+{
+	struct bpws_msg_log *msg;
+	msg = (struct bpws_msg_log *) malloc(sizeof(struct bpws_msg_log));
+	msg->type = BPWS_MSG_TYPE_LOG;
+	msg->id = msg_id;
+	msg->log_level = (char*)malloc(strlen(log_level));
+	strcpy(msg->log_level, log_level);
+	msg->log_message = (char*)malloc(strlen(log_message));
+	strcpy(msg->log_message, log_message);
+	return msg;
+}
+
 struct bpws_msg_request_server_info* bpws_new_msg_request_server_info(const char* client_name)
 {
 	struct bpws_msg_request_server_info *msg;
@@ -539,12 +645,30 @@ struct bpws_msg_request_server_info* bpws_new_msg_request_server_info(const char
 	return msg;
 }
 
-struct bpws_msg_ping* bpws_new_msg_ping(long long msgId)
+/*
+BPWS_MSG_TYPE_SERVER_INFO,
+BPWS_MSG_TYPE_FLESHLIGHT_LAUNCH_FW12_CMD,
+BPWS_MSG_TYPE_LOVENSE_CMD,
+BPWS_MSG_TYPE_KIIROO_CMD,
+BPWS_MSG_TYPE_VORZE_A10_CYCLONE_CMD,
+BPWS_MSG_TYPE_SINGLE_MOTOR_VIBRATE_CMD,*/
+
+struct bpws_msg_stop_device_cmd* bpws_new_msg_stop_device_cmd(long long msg_id, long long device_index)
 {
-	struct bpws_msg_ping *msg;
-	msg = (struct bpws_msg_ping *) malloc(sizeof(struct bpws_msg_ping));
-	msg->type = BPWS_MSG_TYPE_PING;
-	msg->id = msgId;
+	struct bpws_msg_stop_device_cmd *msg;
+	msg = (struct bpws_msg_stop_device_cmd *) malloc(sizeof(struct bpws_msg_stop_device_cmd));
+	msg->type = BPWS_MSG_TYPE_STOP_DEVICE_CMD;
+	msg->id = msg_id;
+	msg->device_index = device_index;
+	return msg;
+}
+
+struct bpws_msg_stop_all_devices* bpws_new_msg_stop_all_devices(long long msg_id)
+{
+	struct bpws_msg_stop_all_devices *msg;
+	msg = (struct bpws_msg_stop_all_devices *) malloc(sizeof(struct bpws_msg_stop_all_devices));
+	msg->type = BPWS_MSG_TYPE_STOP_DEVICE_CMD;
+	msg->id = msg_id;
 	return msg;
 }
 
