@@ -98,10 +98,6 @@ callback_lws_buttplug(struct lws *wsi, enum lws_callback_reasons reason,
 
 		lwsl_notice("butplug: LWS_CALLBACK_CLIENT_ESTABLISHED\n");
 
-		data->state = 0;
-		data->data = 0;
-		data->len = 0;
-
 		/*
 		 * start the ball rolling,
 		 * LWS_CALLBACK_CLIENT_WRITEABLE will come next service
@@ -312,11 +308,9 @@ callback_lws_buttplug(struct lws *wsi, enum lws_callback_reasons reason,
 static const struct lws_protocols protocols[] = {
 	{
 		"buttplug",
-		callback_lws_buttplug,
-		sizeof(struct lws_buttplug_data),
-		20,
+		callback_lws_buttplug
 	},
-	{ NULL, NULL, 0, 0 } /* end */
+	{ 0 } /* end */
 };
 
 static const struct lws_extension exts[] = {
@@ -354,6 +348,7 @@ int main(int argc, char **argv)
 	struct lws_context_creation_info info;
 	struct lws_client_connect_info i;
 	struct lws_context *context;
+	struct lws_buttplug_data *data;
 	const char *prot, *p;
 	char path[300];
 	char cert_path[1024] = "";
@@ -401,6 +396,14 @@ int main(int argc, char **argv)
 	info.ws_ping_pong_interval = pp_secs;
 	info.extensions = exts;
 
+
+	data = (struct lws_buttplug_data*)malloc(sizeof(struct lws_buttplug_data));
+	data->state = 0;
+	data->data = 0;
+	data->len = 0;
+	i.userdata = data;
+
+
 #if defined(LWS_OPENSSL_SUPPORT)
 	info.options |= LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
 #endif
@@ -446,7 +449,7 @@ int main(int argc, char **argv)
 		fprintf(stderr, "Creating libwebsocket context failed\n");
 		return 1;
 	}
-
+	
 	i.context = context;
 	i.ssl_connection = use_ssl;
 	i.host = i.address;
@@ -490,16 +493,13 @@ int main(int argc, char **argv)
 
 	m = 0;
 	while (!force_exit && wsi_mirror) {
-
 		lws_service(context, 50);
-		if (i.userdata)
-		{
-			lwsl_notice("buttplug: userdata! %s\n", (((struct lws_buttplug_data*)i.userdata)->data ? ((struct lws_buttplug_data*)i.userdata)->data : "<empty>"));
-		}
 	}
 
 	lwsl_err("Exiting\n");
 	lws_context_destroy(context);
+	free(data->data);
+	free(data);
 
 	return ret;
 }
